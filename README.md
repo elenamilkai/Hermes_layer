@@ -2,7 +2,7 @@
 
 -----------------
 
-Real-Time Analytics Over Cloud Database Engines
+Off-the-shelf Real-Time Analytics Over Cloud Database Engines
 
 ## Set up the System
 
