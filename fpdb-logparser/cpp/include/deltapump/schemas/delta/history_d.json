@@ -1,0 +1,10 @@
+{
+  "type": "record",
+  "name": "history",
+  "fields" : [
+    {"name": "h_orderkey", "type": "int"},
+    {"name": "h_custkey", "type" : "int"},
+    {"name": "h_amount", "type" : "int"},
+    {"name": "type", "type": "string"}
+  ]
+}

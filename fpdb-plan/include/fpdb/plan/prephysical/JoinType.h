@@ -1,0 +1,20 @@
+//
+// Created by Yifei Yang on 11/7/21.
+//
+
+#ifndef FPDB_FPDB_PLAN_INCLUDE_FPDB_PLAN_PREPHYSICAL_JOINTYPE_H
+#define FPDB_FPDB_PLAN_INCLUDE_FPDB_PLAN_PREPHYSICAL_JOINTYPE_H
+
+namespace fpdb::plan::prephysical {
+
+enum JoinType {
+  INNER,
+  LEFT,
+  RIGHT,
+  FULL,
+  SEMI
+};
+
+}
+
+#endif //FPDB_FPDB_PLAN_INCLUDE_FPDB_PLAN_PREPHYSICAL_JOINTYPE_H
