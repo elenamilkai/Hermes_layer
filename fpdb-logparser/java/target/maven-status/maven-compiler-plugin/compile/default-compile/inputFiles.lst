@@ -1,0 +1,5 @@
+/home/ubuntu/FPDB/fpdb-logparser/java/main/java/com/flexpushdowndb/logparser/server/Server.java
+/home/ubuntu/FPDB/fpdb-logparser/java/main/java/com/flexpushdowndb/logparser/server/LogParserServerHandler.java
+/home/ubuntu/FPDB/fpdb-logparser/java/main/java/com/thrift/logparserserver/LogParserServer.java
+/home/ubuntu/FPDB/fpdb-logparser/java/main/java/com/flexpushdowndb/logparser/parser/Parser.java
+/home/ubuntu/FPDB/fpdb-logparser/java/main/java/com/thrift/logparserserver/Binlog.java

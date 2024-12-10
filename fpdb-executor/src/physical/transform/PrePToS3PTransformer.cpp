@@ -124,7 +124,7 @@ namespace fpdb::executor::physical {
                         cacheHandler_name,
                         predicatesExist);
                 allPOps.emplace_back(deltaMergePOp);
-                SPDLOG_CRITICAL(deltaMergePOp->name());
+//                SPDLOG_CRITICAL(deltaMergePOp->name());
                 // Cache handler operator
                 const auto &cacheHandlerPOp = make_shared<deltacache::CacheHandlerPOp>(
                         cacheHandler_name,
@@ -134,7 +134,7 @@ namespace fpdb::executor::physical {
                         partitionId % numNodes_,
                         deltaMerge_name);
 
-                SPDLOG_CRITICAL(cacheHandlerPOp->name());
+//                SPDLOG_CRITICAL(cacheHandlerPOp->name());
 
                 allPOps.emplace_back(cacheHandlerPOp);
                 deltaMergePOp->consume(cacheHandlerPOp);
@@ -152,7 +152,7 @@ namespace fpdb::executor::physical {
                         awsClient_,
                         true,
                         false);
-                SPDLOG_CRITICAL(stableScanPOp->name());
+///                SPDLOG_CRITICAL(stableScanPOp->name());
 
                 allPOps.emplace_back(stableScanPOp);
                 deltaMergePOp->consume(stableScanPOp);

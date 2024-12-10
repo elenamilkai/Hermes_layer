@@ -35,6 +35,7 @@ DeltaMergePOp::DeltaMergePOp(std::string name,
   predicatesExist_ = predicatesExist;
   batchCounter_ = 0;
   chunkCounter_ = 0;
+  earlyStableChunkIdx_ = -1;
   lastBatch_ = false;
   keepMapCacheMode_ = make_shared<KeepMapCacheMode>();
   evaluatedData_  = nullptr;
@@ -54,25 +55,28 @@ std::string DeltaMergePOp::getTypeString() const { return "DeltaMergePOp"; }
 void DeltaMergePOp::onReceive(const Envelope &msg) {
   if (msg.message().type() == MessageType::START) {
     this->onStart();
-    SPDLOG_CRITICAL("{} has started..", name());
+//    SPDLOG_CRITICAL("{} has started..", name());
   } else if (msg.message().type() == MessageType::TUPLE) {
     // means the producer is stable from scan operator
     auto stableTupleMessage = dynamic_cast<const TupleMessage &>(msg.message());
-    SPDLOG_CRITICAL("[{}] received {} rows from {}", name(), stableTupleMessage.tuples()->numRows(), msg.message().sender());
+   /// SPDLOG_CRITICAL("[{}] received {} rows from {}", name(), stableTupleMessage.tuples()->numRows(), msg.message().sender());
     stableTuplesReceived_ =  true;
     if (!flag) {
       stables_.emplace_back(stableTupleMessage.tuples());
     } else {
+      batchCounter_++;
       if (stableTuplesReceived_ and deltasReceived_) {
-        stablesBatchedDeltaMerge(stableTupleMessage.tuples());
+        stablesBatchedDeltaMerge(stableTupleMessage.tuples(), batchCounter_);
       } else {
+        earlyChunkBatchCnt_.emplace_back(batchCounter_);
         stables_.emplace_back(stableTupleMessage.tuples());
+  ///      SPDLOG_CRITICAL(">>>>>>>>> [{}] rows {}, stables size {}, early chunk idx: {}", name(), stableTupleMessage.tuples()->numRows(), stables_.size(), earlyStableChunkIdx_);
       }
     }
   } else if (msg.message().type() == MessageType::LOAD_RESPONSE) {
     // means the producer is in-memory deltas
     auto deltaMessage = dynamic_cast<const LoadDeltaResponseMessage &>(msg.message());
-    SPDLOG_CRITICAL("DeltaMerge ID: {}", name());
+//    SPDLOG_CRITICAL("DeltaMerge ID: {}", name());
     deltas_ = deltaMessage.getDeltas();
     SPDLOG_CRITICAL("{} received memory-deltas of size: {}", name(), deltas_.size());
     if (!deltas_.empty()) {
@@ -85,7 +89,14 @@ void DeltaMergePOp::onReceive(const Envelope &msg) {
     stableBm_ = deltaMessage.getStableBm();
     deltasReceived_ = true;
     if(flag and stableTuplesReceived_ and deltasReceived_) {
-        stablesBatchedDeltaMerge(stables_[0]);
+        if(earlyStableChunkIdx_==-1) {
+          earlyStableChunkIdx_ = 0;
+        }
+        else {
+          earlyStableChunkIdx_++;
+        }
+      ////  SPDLOG_CRITICAL("----------ready to send --------> [{}] batches {}, early idx {}, real batch counter {}", name(), stables_.size(), earlyStableChunkIdx_, earlyChunkBatchCnt_[earlyStableChunkIdx_]);
+        stablesBatchedDeltaMerge(stables_[earlyStableChunkIdx_], earlyChunkBatchCnt_[earlyStableChunkIdx_]);
     }
 
   } else if (msg.message().type() == MessageType::DISK_DELTAS) {
@@ -103,7 +114,13 @@ void DeltaMergePOp::onReceive(const Envelope &msg) {
       this->onComplete(completeMessage);
     }
     else{
+
       if (allProducersComplete()) {
+        while(earlyStableChunkIdx_<stables_.size()-1){
+          earlyStableChunkIdx_++;
+         ///// SPDLOG_CRITICAL("----------[after] ready to send --------> [{}] batches {}, early idx {}", name(), stables_.size(), earlyStableChunkIdx_);
+          stablesBatchedDeltaMerge(stables_[earlyStableChunkIdx_], earlyChunkBatchCnt_[earlyStableChunkIdx_]);
+        }
         deltasDeltaMerge();
         this->onComplete(completeMessage);
       }
@@ -167,6 +184,7 @@ void DeltaMergePOp::deltaMerge() {
       iterStables++;
       if (evaluatedStables->numRows() >= iterStables*DefaultChunkSize) {
         auto buf = evaluatedStables->table()->Slice((iterStables-1)*DefaultChunkSize, DefaultChunkSize);
+        /////SPDLOG_CRITICAL("[{}] stable buf {} rows.", name(), buf->num_rows());
         addToQueueAndNotify(buf);
       }
       else{
@@ -194,12 +212,14 @@ void DeltaMergePOp::deltaMerge() {
       iterDeltas++;
       if (evaluatedDeltas->numRows() >= iterDeltas*DefaultChunkSize) {
         auto buf = evaluatedDeltas->table()->Slice((iterDeltas-1)*DefaultChunkSize, DefaultChunkSize);
+        /////SPDLOG_CRITICAL("[{}] stable & deltas buf {} rows.", name(), buf->num_rows());
         addToQueueAndNotify(buf);
       }
       else{
         auto buf = evaluatedDeltas->table()->Slice((iterDeltas-1)*DefaultChunkSize);
         if(buf->num_rows()!=0) {
           addToQueueAndNotify(buf);
+          //////SPDLOG_CRITICAL("[{}] stable & deltas buf {} rows.", name(), buf->num_rows());
         }
         break;
       }
@@ -222,6 +242,7 @@ void DeltaMergePOp::deltaMerge() {
                                            name()),
                                            "DeltaCache");
     }
+    ////SPDLOG_CRITICAL("[{}] Final result after merge: {} stable rows, {} deltas rows", name(), evaluatedStables->numRows(), evaluatedDeltas->numRows());
     std::shared_ptr<TupleSet> combinedTupleSet = nullptr; // we do not send data to the next operators
     std::shared_ptr<Message>
         tupleMessage = std::make_shared<TupleMessage>(combinedTupleSet, name());
@@ -245,7 +266,7 @@ void DeltaMergePOp::deltaMerge() {
   }
 }
 
-void DeltaMergePOp::stablesBatchedDeltaMerge(shared_ptr<TupleSet> batch) {
+void DeltaMergePOp::stablesBatchedDeltaMerge(shared_ptr<TupleSet> batch, int batchCnt) {
 ///  SPDLOG_CRITICAL("---------------{} is ready to start", name());
   if (deltas_.empty()) {
     addToQueueAndNotify(batch->projectExist(projectColumnNames_).value()->table());
@@ -254,24 +275,25 @@ void DeltaMergePOp::stablesBatchedDeltaMerge(shared_ptr<TupleSet> batch) {
     ctx()->tell(tupleMessage);
     return;
   }
-  batchCounter_++;
+  /////batchCounter_++;
+//  SPDLOG_CRITICAL("[{}] tuples batch size: {}, batch cnt: {}", name(), batch->numRows(), batchCnt);
   auto startTime = chrono::steady_clock::now();
   auto keepMapVectors  = keepMapCacheMode_->getBatchedKeepMap(deltas_,
                                                      batch,
                                                      diskDeltas_,
                                                      diskDeltasTimestamps_,
                                                      targetTable_,
-                                                     stableBm_, batchCounter_, lastBatch_);
+                                                     stableBm_, batchCnt, lastBatch_);
 
   auto project_stable = batch->projectExist(projectColumnNames_);
   std::vector<int> keepMap;
-  int batchBegin = DefaultChunkSize*(batchCounter_-1);
+  int batchBegin = DefaultChunkSize*(batchCnt-1);
   int batchEnd;
-  if(stableBm_.get()->size()<DefaultChunkSize*batchCounter_){
+  if(stableBm_.get()->size()<DefaultChunkSize*batchCnt){
     batchEnd = stableBm_.get()->size();
   }
   else{
-    batchEnd = DefaultChunkSize*batchCounter_;
+    batchEnd = DefaultChunkSize*batchCnt;
   }
 
   std::vector<uint8_t> subStableBM( stableBm_->begin()+batchBegin, stableBm_->begin()+batchEnd);
@@ -282,6 +304,8 @@ void DeltaMergePOp::stablesBatchedDeltaMerge(shared_ptr<TupleSet> batch) {
                                           predicatesExist_,
                                           name());
 
+  /////SPDLOG_CRITICAL("[{}] batch: {} stable tuple size: {}", name(), batchCnt, tuple.value()->numRows());
+
   if(evaluatedData_!=nullptr){
     evaluatedData_ = TupleSet::concatenate({evaluatedData_, tuple.value()->projectExist(projectColumnNames_).value()}).value();
   }
@@ -291,10 +315,10 @@ void DeltaMergePOp::stablesBatchedDeltaMerge(shared_ptr<TupleSet> batch) {
 
   if (evaluatedData_->numRows() >= (chunkCounter_+1)*DefaultChunkSize) {
     auto buf = evaluatedData_->table()->Slice(chunkCounter_*DefaultChunkSize, DefaultChunkSize);
+    //////SPDLOG_CRITICAL("[{}] stable buf {} rows. Batch:  {}, Chunk: {}, Evaluated data: {} rows", name(), buf->num_rows(), batchCnt, chunkCounter_, evaluatedData_->numRows());
     addToQueueAndNotify(buf);
     chunkCounter_++;
   }
-
 
   std::shared_ptr<TupleSet> combinedTupleSet = nullptr; // we do not send data to the next operators
   std::shared_ptr<Message>
@@ -306,7 +330,7 @@ void DeltaMergePOp::deltasDeltaMerge(){
   if(deltas_.empty()){
     return;
   }
-  batchCounter_++;
+  //////batchCounter_++;
   lastBatch_ = true;
   auto keepMapVectors  = keepMapCacheMode_->getBatchedKeepMap(deltas_,
                                                              nullptr,
@@ -328,6 +352,9 @@ void DeltaMergePOp::deltasDeltaMerge(){
                                             predicatesExist_,
                                             name());
 
+    /////SPDLOG_CRITICAL("[{}] deltas tuple size: {}", name(), tuple.value()->numRows());
+
+
     mergedDeltas = tuple.value();
     if(evaluatedData_== nullptr){
       evaluatedData_ = tuple.value()->projectExist(projectColumnNames_).value();
@@ -346,16 +373,19 @@ void DeltaMergePOp::deltasDeltaMerge(){
   while(true) {
     if (evaluatedData_->numRows() >= (chunkCounter_ + 1) * DefaultChunkSize) {
       auto buf = evaluatedData_->table()->Slice(chunkCounter_ * DefaultChunkSize, DefaultChunkSize);
+      /////SPDLOG_CRITICAL("[{}] stable & deltas buf {} rows. Chunk: {}, Evaluated data: {} rows", name(), buf->num_rows(),  chunkCounter_, evaluatedData_->numRows());
       addToQueueAndNotify(buf);
       chunkCounter_++;
     } else {
       auto buf = evaluatedData_->table()->Slice(chunkCounter_ * DefaultChunkSize);
       if (buf->num_rows() != 0) {
+        //////SPDLOG_CRITICAL("[{}] stable & deltas buf {} rows. Chunk: {}, Evaluated data: {} rows", name(), buf->num_rows(), chunkCounter_, evaluatedData_->numRows());
         addToQueueAndNotify(buf);
       }
       break;
     }
   }
+ /// SPDLOG_CRITICAL("[{}] Evaluated data: {} rows", name(), evaluatedData_->numRows());
   mergedDeltas->combine();
   ctx()->send(MergedDeltaMessage::make(this->targetTable_,
                                        this->targetPartition_->toRawPartition(),
@@ -367,7 +397,7 @@ void DeltaMergePOp::deltasDeltaMerge(){
 
 
 void DeltaMergePOp::noMerge(){
-  SPDLOG_CRITICAL(projectColumnNames_.size());
+//  SPDLOG_CRITICAL(projectColumnNames_.size());
   int iter = 0;
   while (true) {
     iter++;
@@ -409,6 +439,7 @@ void DeltaMergePOp::addToQueueAndNotify(shared_ptr<arrow::Table> batch){
     std::unique_lock<std::mutex> lock(lo_mtx_);
     lo_batchQueue.push(batch);
     lo_vBatchReady.notify_one();
+    ///SPDLOG_CRITICAL("[{}]-----------------------------Ready-Lineorder {}", name(), batch->num_rows());
   } else if(tableName_=="customer"){
  //   SPDLOG_CRITICAL("-----------------------------Ready-Customer {} rows", batch->num_rows());
     std::unique_lock<std::mutex> lock(c_mtx_);

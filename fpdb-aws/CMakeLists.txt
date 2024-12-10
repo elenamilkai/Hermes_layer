@@ -17,8 +17,7 @@ target_link_libraries(fpdb-aws PUBLIC fpdb-util)
 target_link_libraries(fpdb-aws PUBLIC spdlog::spdlog)
 target_link_libraries(fpdb-aws PUBLIC aws-cpp-sdk-core)
 target_link_libraries(fpdb-aws PUBLIC aws-cpp-sdk-s3)
-
-
+target_link_libraries(fpdb-aws PUBLIC aws-cpp-sdk-sts)
 #-----------------------------------------------------------------------------------------------------------------------
 # Diagnostics
 #-----------------------------------------------------------------------------------------------------------------------

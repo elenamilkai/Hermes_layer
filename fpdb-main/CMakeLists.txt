@@ -60,6 +60,9 @@ add_executable(fpdb-main-test
 
 target_link_libraries(fpdb-main-test PRIVATE fpdb-main)
 target_link_libraries(fpdb-main-test PRIVATE doctest::doctest)
+target_link_libraries(fpdb-main-test PRIVATE arrow_static arrow_shared aws-cpp-sdk-s3 aws-cpp-sdk-core aws-cpp-sdk-sts)
+
+
 # need to add and link libraries on mac
 if (${APPLE})
   linkForMacExecutable(fpdb-main-test)

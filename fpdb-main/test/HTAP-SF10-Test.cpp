@@ -15,8 +15,10 @@ TEST_SUITE("ssb-sf10-single_node-no-parallel" * doctest::skip(SKIP_SUITE)) {
   TEST_CASE("ssb-sf10-single_node-no-parallel-original" * doctest::skip(false || SKIP_SUITE)) {
     REQUIRE(TestUtil::e2eNoStartCalciteServer(SCHEMA_PATH,
                                               {
-                                                  "ssb/original/4.1.sql"
-                                                  /*"ssb/original/1.1.sql",
+                                                  "ssb/original/1.sql",
+                                                  "ssb/original/1.sql"
+                                                  /*"ssb/original/4.1.sql",
+                                                  "ssb/original/1.1.sql",
                                                   "ssb/original/1.2.sql",
                                                   "ssb/original/1.3.sql",
                                                   "ssb/original/2.1.sql",
@@ -28,8 +30,7 @@ TEST_SUITE("ssb-sf10-single_node-no-parallel" * doctest::skip(SKIP_SUITE)) {
                                                   "ssb/original/3.4.sql",
                                                   "ssb/original/4.1.sql",
                                                   "ssb/original/4.2.sql",
-                                                  "ssb/original/4.3.sql",*/
-
+                                                  "ssb/original/4.3.sql"*/
                                               },
                                               PARALLEL_DEGREE,
                                               false));

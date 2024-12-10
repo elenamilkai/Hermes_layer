@@ -127,7 +127,7 @@ long BinlogParser::parse(std::unordered_map<int, std::set<struct lineorder_recor
     while (lineorderReader.read(l1)) {
         //int key = (int) partitionInfo["lineorder"] - 1;
         int key;
-        if(static_cast<int>((l1).lo_orderkey) <= 500250){
+        /**if(static_cast<int>((l1).lo_orderkey) <= 500250){
           key = 0;
         }
         else if (static_cast<int>((l1).lo_orderkey) > 500250 &&  static_cast<int>((l1).lo_orderkey) <= 1000306){
@@ -217,11 +217,12 @@ long BinlogParser::parse(std::unordered_map<int, std::set<struct lineorder_recor
         else if (static_cast<int>((l1).lo_orderkey) > 14498877 &&  static_cast<int>((l1).lo_orderkey) <= 14998603){
           key = 29;
         }
-        /*else if (static_cast<int>((l1).lo_orderkey) > 14998603){
-          key = 30;
-        }*/
+        //else if (static_cast<int>((l1).lo_orderkey) > 14998603){
+        //  key = 30;
+        //}
+        **/
 
-        /*if(static_cast<int>((l1).lo_orderkey) <= 1499927){
+        if(static_cast<int>((l1).lo_orderkey) <= 1499927){
           key = 0;
         }
         else if (static_cast<int>((l1).lo_orderkey) > 1499927 &&  static_cast<int>((l1).lo_orderkey) <= 2999416){
@@ -371,9 +372,9 @@ long BinlogParser::parse(std::unordered_map<int, std::set<struct lineorder_recor
         else if (static_cast<int>((l1).lo_orderkey) > 73498852 &&  static_cast<int>((l1).lo_orderkey) <= 74999217){
           key = 49;
         }
-        else if (static_cast<int>((l1).lo_orderkey) > 74999217 &&  static_cast<int>((l1).lo_orderkey) <= 75000000){
-          key = 50;
-        }*/
+        //else if (static_cast<int>((l1).lo_orderkey) > 74999217 &&  static_cast<int>((l1).lo_orderkey) <= 75000000){
+        //  key = 50;
+        //}
         //insert record into a partition (create a new partition if not exist)
         lineorder_record r = {static_cast<int>((l1).lo_orderkey), static_cast<int>((l1).lo_linenumber), MakeTuple::makeLineorderDeltaTuple(l1)} ;
         auto it = (*lineorder_record_map).find(key);

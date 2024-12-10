@@ -37,7 +37,7 @@ private:
   void onComplete(const CompleteMessage &msg);
   bool allProducersComplete();
   void deltaMerge();
-  void stablesBatchedDeltaMerge(shared_ptr<TupleSet> batch);
+  void stablesBatchedDeltaMerge(shared_ptr<TupleSet> batch, int batchCnt);
   void deltasDeltaMerge();
   void noMerge();
   void addToQueueAndNotify(shared_ptr<arrow::Table> batch);
@@ -47,9 +47,11 @@ private:
   std::vector<std::shared_ptr<TupleSet>> diskDeltas_;
   std::vector<int> diskDeltasTimestamps_;
   std::string cacheHandlerName_;
-  int batchCounter_;
+  int batchCounter_;  // the number of the stables batch of size 100000 that arrives from S3Get, this corresponds to one specific partition that has multiple batches of 100000
   bool lastBatch_;
-  int chunkCounter_;
+  int chunkCounter_;  // counter used to help with merging in 100000 size batches for the sending to the AP engine
+  int earlyStableChunkIdx_;  // specifies the index of the stables_ that can be used next
+  std::vector<int> earlyChunkBatchCnt_;
   std::shared_ptr<TupleSet> evaluatedData_;
   std::unordered_map<int, std::unordered_set<int>> deleteMap_;
   vector<std::pair<int, int>> deletedKeys_;

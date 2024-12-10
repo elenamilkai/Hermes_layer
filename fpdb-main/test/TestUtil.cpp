@@ -80,16 +80,13 @@ bool TestUtil::e2eNoStartCalciteServer(const string &schemaName,
 
 void TestUtil::runTest() {
   spdlog::set_level(spdlog::level::info);
-
   // AWS client
   makeAWSClient();
-
   // Catalogue entry
   makeCatalogueEntry();
-
   // Calcite client
   makeCalciteClient();
-//  SPDLOG_CRITICAL("Initiate the calcite client");
+
 
   // mode and caching policy
   mode_ = Mode::pullupMode();
@@ -270,7 +267,7 @@ std::vector<std::int8_t> TestUtil::execute(const string& query, const int64_t qu
   std::vector<int8_t> emptyTableBytes;
   if(condition(queryCounter)) {
     std::cout << "queryCounter: " << queryCounter  << "---->" << query << std::endl;
-    if (queryCounter > 10) {
+    if (queryCounter >= 4) {
       flag = true;
     }
     // save the result and send it to DuckDB in chunks

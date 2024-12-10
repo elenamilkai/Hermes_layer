@@ -52,6 +52,7 @@ function(linkForMacExecutable target)
           libgvplugin_core.6.dylib
           @rpath/libaws-cpp-sdk-core.dylib
           @rpath/libaws-cpp-sdk-s3.dylib
+          @rpath/libaws-cpp-sdk-sts.dylib
           @rpath/libaws-crt-cpp.dylib
           @rpath/libcaf_core.0.18.5.dylib
           @rpath/libcaf_io.0.18.5.dylib)
@@ -59,6 +60,7 @@ function(linkForMacExecutable target)
           ${CMAKE_BINARY_DIR}/_deps/graphviz_ep/install/lib/graphviz/libgvplugin_core.6.dylib
           ${CMAKE_BINARY_DIR}/_deps/aws-cpp-sdk_ep/install/lib/libaws-cpp-sdk-core.dylib
           ${CMAKE_BINARY_DIR}/_deps/aws-cpp-sdk_ep/install/lib/libaws-cpp-sdk-s3.dylib
+          ${CMAKE_BINARY_DIR}/_deps/aws-cpp-sdk_ep/install/lib/libaws-cpp-sdk-sts.dylib
           ${CMAKE_BINARY_DIR}/_deps/aws-cpp-sdk_ep/install/lib/libaws-crt-cpp.dylib
           ${CMAKE_BINARY_DIR}/_deps/caf_ep/install/lib/libcaf_core.0.18.5.dylib
           ${CMAKE_BINARY_DIR}/_deps/caf_ep/install/lib/libcaf_io.0.18.5.dylib)

@@ -312,13 +312,20 @@ KeepMapCacheMode::getBatchedKeepMap(const std::vector<std::shared_ptr<DeltaCache
               }
             }
             if (!found and stableBm != nullptr and  max >= tailPk.first) {  //
-              auto pos = binarySearch(stablePrimaryKeyColumns[0], 0, stablesNumRows, tailPk.first);
+              auto pos = binarySearch(stablePrimaryKeyColumns[0], 0, stablesNumRows-1, tailPk.first);
               if (pos != -1) {//tail key found in stable
                 (*stableBm)[(batchCounter-1)*DefaultChunkSize+pos] = 0;
                 found = true;
                 seen_[j] = true;
               }
             }
+            /*if(!found and stableBm != nullptr and  max >= tailPk.first){
+              SPDLOG_CRITICAL("---------------------->>>>> Still not found {} : {}, max: {} <<<<<<---------------------",
+                              tailPrimaryKeyColumns_[0]->element(j).value()->value<int32_t>().value(),
+                              tailPrimaryKeyColumns_[1]->element(j).value()->value<int32_t>().value(),
+                              max
+                              );
+            }*/
           }
       }
     }

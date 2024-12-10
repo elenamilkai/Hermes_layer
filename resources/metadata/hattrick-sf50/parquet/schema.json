@@ -227,7 +227,7 @@
         "name": "parquet",
         "fieldDelimiter": ","
       },
-      "numPartitions": 50,
+      "numPartitions": 51,
       "primaryKeyNames": ["lo_orderkey", "lo_linenumber"],
       "fields": [
         {
