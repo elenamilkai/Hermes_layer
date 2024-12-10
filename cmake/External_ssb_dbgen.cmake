@@ -1,0 +1,43 @@
+# SPDLog
+
+set(SSB_DBGEN_VERSION "master")
+set(SSB_DBGEN_GIT_URL "https://github.com/eyalroz/ssb-dbgen.git")
+
+include(ExternalProject)
+find_package(Git REQUIRED)
+
+
+set(SSB_DBGEN_BASE ssb_dbgen_ep)
+set(SSB_DBGEN_PREFIX ${DEPS_PREFIX}/${SSB_DBGEN_BASE})
+set(SSB_DBGEN_BASE_DIR ${CMAKE_CURRENT_BINARY_DIR}/${SSB_DBGEN_PREFIX})
+set(SSB_DBGEN_SRC_DIR ${SSB_DBGEN_BASE_DIR}/src/${SSB_DBGEN_BASE})
+set(SSB_DBGEN_BUILD_DIR ${SSB_DBGEN_BASE_DIR}/src/${SSB_DBGEN_BASE}-build)
+set(SSB_DBGEN_EXECUTABLE ${SSB_DBGEN_BUILD_DIR}/dbgen CACHE INTERNAL "SSB_DBGEN_EXECUTABLE" FORCE)
+set(SSB_DBGEN_WORKING_DIRECTORY ${SSB_DBGEN_SRC_DIR} CACHE INTERNAL "SSB_DBGEN_WORKING_DIRECTORY" FORCE)
+
+# Patch CMakeLists.txt error
+set(_PATCH_COMMAND "")
+string(APPEND _PATCH_COMMAND "sed ")
+string(APPEND _PATCH_COMMAND "-i 's/set_property(TARGET dbgen qgen APPEND PROPERTY C_STANDARD 99)/set_property(TARGET dbgen qgen PROPERTY C_STANDARD 99)/' ")
+string(APPEND _PATCH_COMMAND "${SSB_DBGEN_SRC_DIR}/CMakeLists.txt ")
+
+ExternalProject_Add(${SSB_DBGEN_BASE}
+        PREFIX ${SSB_DBGEN_PREFIX}
+        GIT_REPOSITORY ${SSB_DBGEN_GIT_URL}
+        GIT_TAG ${SSB_DBGEN_VERSION}
+        GIT_PROGRESS ON
+        GIT_SHALLOW ON
+        UPDATE_DISCONNECTED TRUE
+        BUILD_BYPRODUCTS ${SSB_DBGEN_EXECUTABLE}
+        PATCH_COMMAND sh -c "${_PATCH_COMMAND}"
+        CMAKE_ARGS
+        -DCSV_OUTPUT_FORMAT=ON
+        -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
+        INSTALL_COMMAND ""
+        )
+
+add_executable(ssb_db_gen IMPORTED)
+set_target_properties(ssb_db_gen PROPERTIES IMPORTED_LOCATION ${SSB_DBGEN_SRC_DIR}/dbgen)
+add_dependencies(ssb_db_gen ${SSB_DBGEN_BASE})
+
+
